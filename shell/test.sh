@@ -1,0 +1,1 @@
+ps -ef |grep hadoop |grep -v grep | awk print{2}
