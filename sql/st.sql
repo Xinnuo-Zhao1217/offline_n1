@@ -293,3 +293,65 @@ where dt='2025-03-24'  and id is not null;
 select * from dwd_base_organ;
 
 
+
+drop table dws_cargo_order_daily1_sum;
+CREATE TABLE dws_cargo_order_daily1_sum (
+
+                                            cargo_type        string COMMENT '货物类型',
+                                            receiver_city     string COMMENT '收件人城市（区域）',
+                                            collect_type      string COMMENT '取件类型',
+                                            order_count       bigint COMMENT '下单数',
+                                            amount_sum        decimal(32, 2) COMMENT '下单金额总和'
+) COMMENT '最近1日数据汇总表'
+PARTITIONED BY (`dt` string)
+STORED AS PARQUET
+LOCATION '/2207A/chenming/tms/dws/dws_cargo_order_daily_sum/'
+TBLPROPERTIES (
+    "compression"="lzo"
+);
+set hive.exec.dynamic.partition.mode=nonstrict;
+insert into dws_cargo_order_daily1_sum partition (dt='2025-03-24')
+select
+    cargo_type,
+    receiver_city,
+    collect_type ,
+    order_count,
+    amount_sum
+
+from (select cargo_type,
+             fo.name as receiver_city,
+             collect_type,
+             count(distinct ia.id) as order_count,
+             sum(amount * cargo_num)  amount_sum,
+             fo.dt
+
+      from ods_order_info ia
+               left join ods_order_cargo c on ia.id = c.order_id
+               left join dwd_base_dic cc on c.cargo_type = cc.id
+               left join dwd_base_region_info fo on ia.receiver_city_id = fo.id
+      where c.dt ='2025-03-24' and cc.dt='2025-03-24' and fo.dt='2025-03-24'
+      group by cargo_type,fo.name,collect_type,fo.dt
+     )a
+where a.dt ='2025-03-24';
+
+create database hive_xinnuo_zhao;
+use hive_xinnuo_zhao;
+drop table base_region;
+create table ods_order_info
+(
+    id           string comment '编号',
+    total_amount decimal(16, 2) comment '总金额',
+    order_status string comment '订单状态',
+    user_id      string comment '用户id',
+    payment_way  string comment '订单备注',
+    out_trade_no string comment '订单交易编号（第三方支付用)',
+    create_time  string comment '创建时间',
+    operate_time string comment '操作时间'
+) comment '订单表 订单表';
+-- dev_realtime_g1_xinnuo_zhao
+
+create table base_region
+(
+    id          string comment '大区id',
+    region_name string comment '大区名称'
+);
