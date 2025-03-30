@@ -355,3 +355,4 @@ create table base_region
     id          string comment '大区id',
     region_name string comment '大区名称'
 );
+
